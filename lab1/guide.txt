@@ -1,0 +1,4 @@
+nvcc lab1.cu -o lab1.exe
+./lab1.exe
+chmod +x image.gpi
+./image.gpi

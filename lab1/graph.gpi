@@ -1,0 +1,16 @@
+#! /usr/bin/gnuplot
+#! /usr/bin/gnuplot -persist
+
+#изображение, где будет диаграмма
+set terminal png font "Verdana,12" size 1200, 800
+set output "graph.png"
+
+#символ-раделитель в output.csv
+set datafile separator ';'
+
+#подпись осей
+set xlabel "threads count"
+set ylabel "time in seconds"
+
+#считать информацию
+plot "output.csv" using 1:2 with linespoints lw 3 pt 5 title "graph"
