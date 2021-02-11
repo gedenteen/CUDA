@@ -1,0 +1,26 @@
+#! /usr/bin/gnuplot
+#! /usr/bin/gnuplot -persist
+
+#изображение, где будет диаграмма
+set terminal png font "Verdana,14" size 1300, 900
+set output "histogram.png"
+
+#символ-раделитель в output.csv
+set datafile separator ';'
+
+# подписи к осям
+set ylabel "time in seconds"
+set xlabel "count of threads" 
+
+# отступ снизу
+set bmargin 4
+
+# устаносить стиль гистограмм
+set style data histograms 
+
+# дизайн столбцов
+set boxwidth 2 absolute 
+set style fill solid 1 
+
+plot "output.csv" using 2:xtic(1) lt rgb 'brown' title "a"
+# using 2:xtic(1) = использовать 2-й столбец как данные, а 1-ый — как подписи по оси x (xtic)
