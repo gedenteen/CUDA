@@ -2,24 +2,13 @@
 #include <stdio.h>
 #include <malloc.h>
 
-/*
 #define CUDA_CHECK_RETURN(value) {\
 	cudaError_t _m_cudaStat = value;\
 	if (_m_cudaStat != cudaSuccess) {\
-		fprintf(stderr, "Error %s at line in file %s\n",\
+		fprintf(stderr, "Error \"%s\" at line %d in file %s\n",\
 			cudaGetErrorString(_m_cudaStat), __LINE__, __FILE__);\
 		exit(1);\
 	}\
-}
-*/
-
-void CUDA_CHECK_RETURN(cudaError_t _m_cudaStat) {
-	//cudaError_t _m_cudaStat = value;
-	if (_m_cudaStat != cudaSuccess) {
-		fprintf(stderr, "Error \"%s\" at line %d in file %s\n",
-			cudaGetErrorString(_m_cudaStat), __LINE__, __FILE__);
-		exit(1);
-	}
 }
 
 __global__ void gTest(double* a) {
@@ -46,7 +35,7 @@ int main() {
 	
 	cudaEventRecord(stop,0); // привязка события stop
 	cudaEventSynchronize(stop); // синхронизация по событию
-	//CUDA_CHECK_RETURN(cudaDeviceSynchronize());
+	CUDA_CHECK_RETURN(cudaDeviceSynchronize());
 	CUDA_CHECK_RETURN(cudaGetLastError());
 	
 	cudaEventElapsedTime(&elapsedTime,start,stop); // вычисление
