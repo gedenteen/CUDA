@@ -18,7 +18,7 @@ __global__ void gTest(double* a) {
 
 int main() {
 	double *device_a, *host_a;
-	int num_of_blocks = 10, threads_per_block = 1025; //error here
+	int num_of_blocks = 10, threads_per_block = 1024; //error here
 	int N = num_of_blocks * threads_per_block;
 	
 	host_a = (double*) calloc(N, sizeof(double));

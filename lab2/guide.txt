@@ -1,0 +1,1 @@
+nvcc lab2.cu -o lab2.exe && sudo nvprof ./lab2.exe
