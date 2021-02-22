@@ -69,7 +69,7 @@ float testingThreadsOfDevice(int threads_cnt, int type_time) {
 		CUDA_CHECK_RETURN(cudaGetLastError());
 	}
 	
-	printf("blocks = %d, threads per block = %d seconds = %e \n",
+	printf("blocks = %d, threads per block = %d milliseconds = %e \n",
 		N / threads_cnt, threads_cnt, elapsedTime);
 	
 	/// проверка: ///
