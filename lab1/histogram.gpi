@@ -2,7 +2,7 @@
 #! /usr/bin/gnuplot -persist
 
 #изображение, где будет диаграмма
-set terminal png font "Verdana,14" size 1300, 900
+set terminal png font "Verdana,14" size 1700, 900
 set output "histogram.png"
 
 #символ-раделитель в output.csv

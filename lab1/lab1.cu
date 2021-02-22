@@ -25,7 +25,7 @@ double testingThreadsOfDevice(int threads_cnt/*, double* vector1_d, double* vect
 	double *vector1_d, *vector2_d;
 	cudaMalloc((void**)&vector1_d, N * sizeof(double));
 	cudaMalloc((void**)&vector2_d, N * sizeof(double)); 
-	gInitVectors <<< 1, 1 >>> (vector1_d, vector2_d);
+	gInitVectors <<< 1, 32 >>> (vector1_d, vector2_d);
 	
 	/// проверка: ///
 	/*cudaMemcpy(vectorSum_h, vector1_d, N * sizeof(double), cudaMemcpyDeviceToHost); 
@@ -68,11 +68,10 @@ int main() {
 		printf("error: can't open output.csv \n");
 		return 1;
 	}
-	//инициализация векторов:
 	
 	//тестирование и запись в файл:
 	fprintf(fout, "threads_per_block;time_in_seconds;\n");
-	for (int i = 1; i <= 1024; i *= 2)//i < 100 ? i *= 2 : i += 50)
+	for (int i = 32; i <= 1024; i += 32)//i < 100 ? i *= 2 : i += 50)
 		fprintf(fout, "%d;%e;\n", i, testingThreadsOfDevice(i/*, vector1_d, vector2_d*/));
 
 	 
