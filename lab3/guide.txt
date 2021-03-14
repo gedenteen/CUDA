@@ -1,0 +1,4 @@
+nvcc test.cu -o test.exe && ./test.exe
+./task1.sh
+./task2.sh
+nvcc matrix.cu -o matrix.exe && sudo nvprof ./matrix.exe 4096 32
