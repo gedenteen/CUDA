@@ -1,0 +1,2 @@
+sudo nvprof ./lab4.exe 4096 32
+sudo nvprof -m shared_efficiency ./lab4.exe 4096 32
