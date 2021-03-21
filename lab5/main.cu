@@ -4,6 +4,15 @@
 #include <math.h>
 #include <cuda.h>
 
+#define CUDA_CHECK_RETURN(value) {\
+	cudaError_t _m_cudaStat = value;\
+	if (_m_cudaStat != cudaSuccess) {\
+		fprintf(stderr, "Error \"%s\" at line %d in file %s\n",\
+			cudaGetErrorString(_m_cudaStat), __LINE__, __FILE__);\
+		exit(1);\
+	}\
+} //макрос для обработки ошибок 
+
 #define M_PI 3.14159265358979323846
 #define COEF 48
 #define VERTCOUNT COEF*COEF*2
@@ -193,9 +202,9 @@ int main(void){
 	printf("Texture sum = %.10f\n", s*M_PI*M_PI / COEF/COEF);
 	*/
 	
-	float *arr_dev = (float *)malloc(sizeof(float) * FGSIZE * FGSIZE * FGSIZE);
-	//init_texture(arr_dev);
-	calc_f(arr_dev, FGSIZE, FGSIZE, FGSIZE, &func);
+	float *arr_dev;
+	cudaMalloc((void**)&arr_dev, sizeof(float) * FGSIZE * FGSIZE * FGSIZE);
+	cudaMemcpy(arr_dev, arr, sizeof(float) * FGSIZE * FGSIZE * FGSIZE, cudaMemcpyHostToDevice);
 	//проверка массива:
 	/*for (int x = 0; x < FGSIZE; ++x)
 		for (int y = 0; y < FGSIZE; ++y)
@@ -210,9 +219,10 @@ int main(void){
 	cudaEventCreate(&start); // инициализация
 		cudaEventCreate(&stop); // событий
 	cudaEventRecord(start, 0);
-	kernelTrilinear<<<BLOCKSPERGRID,THREADSPERBLOCK>>>(sum_dev, arr);//, vert);
-	cudaEventRecord(stop, 0);//	cudaThreadSynchronize();
-	cudaEventSynchronize(stop);
+	kernelTrilinear<<<VERTCOUNT,THREADSPERBLOCK>>>(sum_dev, arr_dev);//, vert);
+	CUDA_CHECK_RETURN(cudaEventRecord(stop, 0));//	cudaThreadSynchronize();
+	CUDA_CHECK_RETURN(cudaEventSynchronize(stop));
+	CUDA_CHECK_RETURN(cudaGetLastError());
 	cudaEventElapsedTime(&elapsedTime, start, stop);
 	
 	cudaMemcpy(sum, sum_dev, sizeof(float) * BLOCKSPERGRID,cudaMemcpyDeviceToHost);
