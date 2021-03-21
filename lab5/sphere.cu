@@ -20,7 +20,7 @@ struct Vertex {
 };
 
 __constant__ Vertex vert[VERTCOUNT];
-//текстура<тип, размерность текстуры, без нормализации> тексурная ссылка;
+//текстура<тип, размерность текстуры, без нормализации> тексурная ссылка:
 texture<float, 3, cudaReadModeElementType> df_tex;
 //указатель на область памяти, предназначенную для работы с текстурой:
 cudaArray * df_Array = 0;
@@ -122,13 +122,12 @@ int main(void){
 	float *sum = (float*)malloc(sizeof(float) * BLOCKSPERGRID);
 	float *sum_dev;
 	cudaMalloc((void**)&sum_dev, sizeof(float) * BLOCKSPERGRID);
-	init_vertices();//init_vertexes();
+	init_vertices();
 	calc_f(arr, FGSIZE, FGSIZE, FGSIZE, &func);
 	init_texture(arr);
 	kernel<<<BLOCKSPERGRID,THREADSPERBLOCK>>>(sum_dev);
 	cudaThreadSynchronize();
-	cudaMemcpy(sum, sum_dev, sizeof(float) * BLOCKSPERGRID,
-		cudaMemcpyDeviceToHost);
+	cudaMemcpy(sum, sum_dev, sizeof(float) * BLOCKSPERGRID,cudaMemcpyDeviceToHost);
 	
 	float s = 0.0f;
 	for (int i = 0; i < BLOCKSPERGRID; ++i)
