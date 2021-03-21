@@ -12,12 +12,12 @@
 } //макрос для обработки ошибок 
 
 void Output(float* a, int N){
-for(int i=0;i<N;i++){
-for(int j=0;j<N;j++)
-fprintf(stdout,"%g\t",a[j+i*N]);
-fprintf(stdout,"\n");
-}
-fprintf(stdout,"\n\n\n");
+	for(int i=0;i<N;i++){
+		for(int j=0;j<N;j++)
+			fprintf(stdout,"%g\t",a[j+i*N]);
+			fprintf(stdout,"\n");
+		}
+	fprintf(stdout,"\n\n\n");
 }
 
 __global__ void gInitializeMatrixByRows(float* matrix_d){
@@ -87,7 +87,7 @@ __global__ void gTranspose2(float* storage_d, float* storage_d_t) {
 
 int main(int argc, char* argv[]){
 	if (argc < 3) {
-		fprintf(stderr, "USAGE: matrix <dimension of matrix> 				<dimension_of_threads>\n");
+		fprintf(stderr, "USAGE: matrix <dimension of matrix> <dimension_of_threads>\n");
 		return -1;
 	}
 	int N=atoi(argv[1]);
@@ -102,8 +102,7 @@ int main(int argc, char* argv[]){
 	if (dim_of_blocks>max_size){
 		fprintf(stderr, "too many blocks\n");
 		return -1; 
-	}
-	*/
+	}*/
 	
 	float *storage_d, *storage_d_t, *storage_h;
 	CUDA_CHECK_RETURN(cudaMalloc((void**)&storage_d, N*N*sizeof(float)));
