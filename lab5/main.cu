@@ -266,7 +266,6 @@ int main(void) {
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
 	
-	//вычисление интеграла с использованием текстурной и константной памяти:
 	for (int test_num = 0; test_num < 3; test_num++) {
 		switch (test_num) {
 			case 0:
