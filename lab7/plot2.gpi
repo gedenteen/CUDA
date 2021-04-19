@@ -1,0 +1,18 @@
+#! /usr/bin/gnuplot
+#! /usr/bin/gnuplot -persist
+
+set terminal gif size 1920,1080 animate delay 0
+#set datafile separator ' '
+
+set output 'thr.gif'
+stats 'thr.dat' nooutput
+set style line 1 lc rgb "0xdc134c" lt 1 lw 4
+set xr[0:256]
+set yr[0:0.05]
+
+do for [i = 1:int(STATS_blocks)] { 
+	plot 'thr.dat' index (i-1) with line ls 1
+}
+
+#ls = line style
+#блоки разделяются \n\n\n ??

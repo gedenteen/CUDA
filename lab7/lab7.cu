@@ -1,5 +1,3 @@
-//#include "cuda_runtime.h"
-//#include "device_launch_parameters.h"
 #include <iostream>
 #include <cmath>
 #include <stdio.h>
@@ -35,15 +33,6 @@ struct Functor
 	}
 };
 
-
-void iteration(float _coeff, thrust::device_vector<float>::iterator x,
-			   thrust::device_vector<float>::iterator xs, 
-			   thrust::device_vector<float>::iterator y)
-{
-	Functor func(_coeff);
-	thrust::transform(x + 1, xs, x, y + 1, func);
-}
-
 float x_func(float x) 
 {
 	return x * x * exp(-(x - A) * (x - A) / B);
@@ -60,11 +49,11 @@ int main()
 	cudaGetDeviceProperties(&deviceProp, 0);
 	printf("device: %s \n\n", deviceProp.name);
 	
-	int Nx = 8192;
-	int Nt = 8192;
-	float tl = 0.2;
+	int Nx = 256; //1024
+	int Nt = 256; //1024
+	float tl = 0.5; //0.2
 
-	float dx = 1.0f / Nx;
+	float dx = 2.0f / Nx; //1.0f / Nx
 	float dt = tl / Nt;
 
 	cudaEvent_t start, stop;
@@ -101,7 +90,7 @@ int main()
 	
 	thrust::device_vector<float> dev(Nx * Nt);
 	thrust::copy(thr.begin(), thr.end(), dev.begin());
-	Functor func(dt / dx);
+	Functor func(dt / dx); //создать функтор, используется конструктор и задается coef
 
 	/// thrust:
 	cudaEventRecord(start, 0);
@@ -145,8 +134,30 @@ int main()
 	printf("thr_sum = %f \ncda_sum = %f \n", thr_sum, cda_sum);
 	*/
 	
+	FILE *fp_thr, *fp_cda;
+	fp_thr = fopen("thr.dat", "w");
+	fp_cda = fopen("cda.dat", "w");
+	for (int j = 0; j < Nt; j++) {
+		for (int i = 0; i < Nx; i++) {
+			fprintf(fp_thr, "%f\n", thr[i + j * Nt]);
+			fprintf(fp_cda, "%f\n", cda[i + j * Nt]);
+		}
+		fprintf(fp_thr, "\n\n\n");
+		fprintf(fp_cda, "\n\n\n");
+	}
+	
 	cudaFree(dev_cda);
 	cudaEventDestroy(start);
 	cudaEventDestroy(stop);
 	return 0;
 }
+
+
+/*
+void iteration(float _coeff, thrust::device_vector<float>::iterator x,
+			   thrust::device_vector<float>::iterator xs, 
+			   thrust::device_vector<float>::iterator y)
+{
+	Functor func(_coeff);
+	thrust::transform(x + 1, xs, x, y + 1, func);
+}*/
