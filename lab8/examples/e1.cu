@@ -107,7 +107,6 @@ int main(){
 	cudaFree(B_dev);
 	// Освобождаем ресурсы на хосте
 	cudaFreeHost(A_h);
-	cudaFreeHost(A_h);
 	cudaFreeHost(B_h);
 	//сброс устройства, подготовка для выполнения новых программ
 	cudaDeviceReset();
