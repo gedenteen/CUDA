@@ -17,7 +17,7 @@
 	}\
 } //макрос для обработки ошибок 
 
-#define CUDA_CHECK_RETURN_CUBLAS(value) {\
+#define CUBLAS_CHECK_RETURN(value) {\
 	cublasStatus_t stat = value;\
 	if (stat != CUBLAS_STATUS_SUCCESS) {\
 		fprintf(stderr, "Error at line %d in file %s\n",\
@@ -87,42 +87,42 @@ float saxpy_cublas(long int arr_size, cudaEvent_t start, cudaEvent_t stop)
 	cudaMalloc( (void **) &A_dev, size_in_bytes );
 	float *B_dev;
 	cudaMalloc( (void **) &B_dev, size_in_bytes );
-	float *A_h;
-	cudaMallocHost( (void **) &A_h, size_in_bytes );
-	float *B_h;
-	cudaMallocHost( (void **) &B_h, size_in_bytes );
-	memset(A_h, 0, size_in_bytes);
-	memset(B_h, 0, size_in_bytes);
+	float *A_hos;
+	cudaMallocHost( (void **) &A_hos, size_in_bytes );
+	float *B_hos;
+	cudaMallocHost( (void **) &B_hos, size_in_bytes );
+	memset(A_hos, 0, size_in_bytes);
+	memset(B_hos, 0, size_in_bytes);
 	
 	//инициализация библиотеки CUBLAS
 	cublasHandle_t cublas_handle;
-	CUDA_CHECK_RETURN_CUBLAS(cublasCreate(&cublas_handle));
+	CUBLAS_CHECK_RETURN(cublasCreate(&cublas_handle));
 	
 	//заполнение массива А:
 	for (int i=0; i < arr_size; i++){
-		A_h[i] = (float)i;
+		A_hos[i] = (float)i;
 	}
 	/*
 	printf("before saxpy (cublas):\n");
 	for (int i = 0; i < 16; i++) {
-		printf("i = %d;\t h1[i] = %g;\t h2[i] = %g\n", i+1, A_h[i], B_h[i]);
-	}
-	*/
+		printf("i = %d;\t h1[i] = %g;\t h2[i] = %g\n", i+1, A_hos[i], B_hos[i]);
+	}*/
 	
-	const int num_rows = arr_size / 4; //arr_size
-	const int num_cols = 4; //1
+	
+	const int num_rows = arr_size; //arr_size
+	const int num_cols = 1; //1
 	const size_t elem_size = sizeof(float);
 	
 	//Копирование матрицы с числом строк arr_size и одним столбцом с
 	//хоста на устройство
-	cublasSetMatrix(num_rows, num_cols, elem_size, A_h,
+	cublasSetMatrix(num_rows, num_cols, elem_size, A_hos,
 		num_rows, A_dev, num_rows); //leading dimension
 	
 	//Очищаем массив на устройстве
 	cudaMemset(B_dev, 0, size_in_bytes);
 	
 	// выполнение SingleAlphaXPlusY (saxpy)
-	const int stride = 1;
+	const int stride = 1; //шаг (каждый stride элемент берется из массива)
 	float alpha = 2.5F;
 	
 	cudaEventRecord(start, 0);
@@ -137,12 +137,12 @@ float saxpy_cublas(long int arr_size, cudaEvent_t start, cudaEvent_t stop)
 	//Копирование матриц с числом строк arr_size и одним столбцом с
 	//устройства на хост
 	cublasGetMatrix(num_rows, num_cols, elem_size, A_dev,
-		num_rows, A_h, num_rows);
+		num_rows, A_hos, num_rows);
 	cublasGetMatrix(num_rows, num_cols, elem_size, B_dev,
-		num_rows, B_h, num_rows);
+		num_rows, B_hos, num_rows);
 	printf("after saxpy (cublas):\n");
 	for (int i = 0; i < 16; i++) {
-		printf("i = %d;\t h1[i] = %g;\t h2[i] = %g\n", i+1, A_h[i], B_h[i]);
+		printf("i = %d;\t h1[i] = %g;\t h2[i] = %g\n", i+1, A_hos[i], B_hos[i]);
 	}
 	*/
 	
@@ -151,8 +151,8 @@ float saxpy_cublas(long int arr_size, cudaEvent_t start, cudaEvent_t stop)
 	cudaFree(A_dev);
 	cudaFree(B_dev);
 	// Освобождаем ресурсы на хосте
-	cudaFreeHost(A_h);
-	cudaFreeHost(B_h);
+	cudaFreeHost(A_hos);
+	cudaFreeHost(B_hos);
 	//сброс устройства, подготовка для выполнения новых программ
 	//cudaDeviceReset();
 	return time;
@@ -169,12 +169,14 @@ int main(){
 	cudaEventCreate(&stop);
 
 	///размерность массивов:
-	const long int arr_size = 1 << 25;
-	
-	float time = saxpy_thrust(arr_size, start, stop);
-	printf("Thrust time = %f ms\n", time);
-	time = saxpy_cublas(arr_size, start, stop);
-	printf("CuBLAS time = %f ms\n", time);
+	long int arr_size = 1 << 20, pow = 20;
+	for ( ; pow <= 25; pow++, arr_size = 1 << pow) {
+		printf("arr_size = 1 << %ld\n", pow); 
+		float time = saxpy_thrust(arr_size, start, stop);
+		printf("Thrust time = %f ms\n", time);
+		time = saxpy_cublas(arr_size, start, stop);
+		printf("CuBLAS time = %f ms\n\n", time);
+	}
 	
 	cudaEventDestroy(start);
 	cudaEventDestroy(stop);

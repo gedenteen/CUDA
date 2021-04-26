@@ -2,21 +2,12 @@
 #include <string.h>
 #include <stdio.h>
 #include <vector>
-#include <algorithm>
-#include <cctype>
-#include <list>
-#include <stdlib.h>
-#include <ctime>
-#include <fstream> //для открытия файлов
-#include <iostream> //для вывода информации на экран
+#include <fstream>
+#include <iostream>
 using namespace std;
-
 #include <cufft.h>
-#include "cublas_v2.h"
 
-#define BATCH 1
-#define SZ (1<<25)
-#define ALPHA 3.0f
+#define BATCH 1 //размер данных для обработки
 
 #define CUDA_CHECK_RETURN(value) {\
 	cudaError_t _m_cudaStat = value;\
@@ -27,9 +18,9 @@ using namespace std;
 	}\
 } //макрос для обработки ошибок 
 
-#define CUDA_CHECK_RETURN_CUBLAS(value) {\
-	cublasStatus_t stat = value;\
-	if (stat != CUBLAS_STATUS_SUCCESS) {\
+#define CUFFT_CHECK_RETURN(value) {\
+	cufftResult stat = value;\
+	if (stat != CUFFT_SUCCESS) {\
 		fprintf(stderr, "Error at line %d in file %s\n",\
 			__LINE__, __FILE__);\
 		exit(1);\
@@ -38,99 +29,92 @@ using namespace std;
 
 int main(void) {
 	string line, buffer;
-	cufftHandle plan;
-	cufftComplex *cpu_data, *gpu_data;
-	vector<string> numline;
-	vector<float> DATA; 
-	vector<float> freq; 
-	vector<float> power;
+	cufftHandle plan; //дескриптор плана конфигурации (нужен для оптимизации под выбранную аппаратуру)
+	cufftComplex *hos_data, *dev_data; //массивы для комплексных чисел
+	vector<string> file_string; //одна строка в файле = массив из 4 чисел в виде string 
+	vector<float> Wolf_nums; //числа Вольфа (весь диск)
+	vector<float> freq; //массив частот после преобразования Фурье (на каждый день одно число)
+	vector<float> power; //массив значений ^ 2 из преобразования Фурье
 	ifstream in;
-	cufftComplex *data_h;
-	int j = 0;
 	
-	for (int i = 1938; i <= 1991; i++) {
-		string path = string("data/w") + to_string(i) + string(".dat");
+	for (int i = 1938; i <= 1991; i++) { //цикл по годам
+		//открыть файл i-го года
+		string path = string("data/w") + to_string(i) + string(".dat"); 
 		in.open(path);
 		if (!in.is_open()) {
 			fprintf(stderr, "can't open a file data/w%d.dat\n", i);
 			return -1;
 		}
 		
-		while(getline(in, line)) {
-			buffer = "";
-			line += " ";
+		while(getline(in, line)) { //считать строку из файла
+			buffer = ""; 
+			line += " "; //добавить пробел для обработки последнего числа
 			for (int k = 0; k < line.size(); k++) {
 				if (line[k] != ' ') {
-					buffer += line[k];
+					buffer += line[k]; //записать число посимвольно в buffer 
 				}
-				else {
+				else { //если пробел, то есть получено число в виде строки
 					if (buffer != "")
-						numline.push_back(buffer);
+						file_string.push_back(buffer);
 						buffer = "";
 				}
 			}
 			
-			if (numline.size() != 0) {
-				if (numline[2] == "999") {
-					numline[2] = to_string(DATA.back());
+			if (file_string.size() != 0) {
+				if (file_string[2] == "999") { //если число Вульфа неизвестно,
+					file_string[2] = to_string(Wolf_nums.back()); //то взять предыдущее значение
 				}
-				DATA.push_back(stoi(numline[2]));
-				numline.clear();
+				Wolf_nums.push_back(stoi(file_string[2])); //преобразовать строку в число, добавить в массив чисел
+				file_string.clear(); //очистить строку
 			}
-			j++;
 		} //end of while(getline(in, line))
 
 		in.close();
 	} //end of for(int i = 1938; i <= 1991; i++)
 	
-	int N = DATA.size();
+	int N = Wolf_nums.size();
 	
-	cudaMalloc((void**)&gpu_data, sizeof(cufftComplex) * N * BATCH);
-	data_h = (cufftComplex*) calloc(N, sizeof(cufftComplex));
-	cpu_data = new cufftComplex[N * BATCH];
+	cudaMalloc((void**)&dev_data, sizeof(cufftComplex) * N * BATCH);
+	hos_data = new cufftComplex[N * BATCH];
 	for (int i = 0; i < N * BATCH; i++) {
-		cpu_data[i].x = DATA[i];
-		cpu_data[i].y = 0.0f;
+		hos_data[i].x = Wolf_nums[i]; //действительная часть
+		hos_data[i].y = 0.0f; //мнимая часть
 	}
-	cudaMemcpy(gpu_data, cpu_data, sizeof(cufftComplex) * N * BATCH, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_data, hos_data, sizeof(cufftComplex) * N * BATCH, cudaMemcpyHostToDevice);
 	
-	if (cufftPlan1d(&plan, N * BATCH, CUFFT_C2C, BATCH) != CUFFT_SUCCESS) {
-		cerr << "error in cufftPlan1d()\n";
-		return -1;
-	}
-	if (cufftExecC2C(plan, gpu_data, gpu_data, CUFFT_FORWARD) != CUFFT_SUCCESS) {
-		cerr << "error in cufftPlan1d()\n";
-		return -1;
-	}
-	if (cudaDeviceSynchronize() != CUFFT_SUCCESS) {
-		cerr << "error in cufftPlan1d()\n";
-		return -1;
-	}
-	cudaMemcpy(data_h, gpu_data, N * sizeof(cufftComplex), cudaMemcpyDeviceToHost);
+	//создание плана, преобразование Фурье происходит из комплексных чисел в комплексные:
+	CUFFT_CHECK_RETURN(cufftPlan1d(&plan, N * BATCH, CUFFT_C2C, BATCH));
+	//совершить быстрое преобразование Фурье (FFT):
+	CUFFT_CHECK_RETURN(cufftExecC2C(plan, dev_data, dev_data, CUFFT_FORWARD));
+	//синхронизация:
+	CUDA_CHECK_RETURN(cudaDeviceSynchronize());
+	//копируем обратно на хост то, что получено после FFT:
+	CUDA_CHECK_RETURN(cudaMemcpy(hos_data, dev_data, N * sizeof(cufftComplex), cudaMemcpyDeviceToHost));
 	
 	power.resize(N / 2 + 1);
 	for (int i = 1; i <= N / 2; i++) {
-		power[i] = sqrt(data_h[i].x * data_h[i].x + data_h[i].y * data_h[i].y);
+		//преобразовать значения, т.к. комплексные числа тяжело интерпретировать:
+		power[i] = sqrt(hos_data[i].x * hos_data[i].x + hos_data[i].y * hos_data[i].y);
 	}
 	
-	float max_freq = 0.5;
+	float max_freq = 0.5; //максимальная частота
 	freq.resize(N / 2 + 1);
 	for (int i = 1; i <= N / 2; i++) {
-		freq[i] = 1 / (float(i) / float(N/2) * max_freq);
+		//получаем равномерно распределенную сетку частот:
+		freq[i] = 1 / (float(i) / float(N/2) * max_freq); 
 	}
 	
-	int maxind = 1;
+	int maxind = 1; //найти максимальное значение 
 	for (int i = 1 ; i <= N / 2; i++) {
 		if (power[i] > power[maxind])
 			maxind = i;
 	}
 	
+	//freq[maxind] - это количество дней при максимальной частоте?
 	printf("calculated periodicity = %f years\n", freq[maxind] / 365);
 	
 	cufftDestroy(plan);
-	cudaFree(gpu_data);
-	free(data_h);
-	free(cpu_data);
-	
+	cudaFree(dev_data);
+	free(hos_data);
 	return 0;
 }
