@@ -1,0 +1,15 @@
+#! /usr/bin/gnuplot
+#! /usr/bin/gnuplot -persist
+
+set terminal png size 1920,1080
+#set datafile separator ' '
+
+set output 'rez.png'
+stats 'cda.dat' nooutput
+set style line 1 lc rgb "0xdc134c" lt 1 lw 4
+set xr[0:256]
+set yr[0:0.05]
+
+plot 'cda.dat' with line ls 1
+
+#ls = line style

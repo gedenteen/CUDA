@@ -121,8 +121,7 @@ int main()
 	cudaEventElapsedTime(&time, start, stop);
 	cout << "CUDA time is " << time << "ms\n\n";
 	
-	/*
-	/// проверка:
+	/* //проверка:
 	float thr_sum = 0.0f;
 	float cda_sum = 0.0f;
 	for (int i = 0; i < Nx; i++) {
@@ -134,6 +133,7 @@ int main()
 	printf("thr_sum = %f \ncda_sum = %f \n", thr_sum, cda_sum);
 	*/
 	
+	//для cda.gpi, thr.gpi
 	FILE *fp_thr, *fp_cda;
 	fp_thr = fopen("thr.dat", "w");
 	fp_cda = fopen("cda.dat", "w");
@@ -145,6 +145,12 @@ int main()
 		fprintf(fp_thr, "\n\n\n");
 		fprintf(fp_cda, "\n\n\n");
 	}
+	
+	/* //это для test.gpi
+	for (int i = 0; i < Nx; i++) {
+		fprintf(fp_cda, "%f\n", cda[i]);
+	}
+	*/
 	
 	cudaFree(dev_cda);
 	cudaEventDestroy(start);
