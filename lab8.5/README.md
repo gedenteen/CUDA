@@ -1,12 +1,6 @@
 Для запуска на Ubuntu нужно проделать следующие шаги:
-1. Проверить, что python3 установлен:
-```
-$ python3 --version
-``` 
-2. Установить Anaconda (дистрибутив Python) - скачать sh-файл с сайта и запустить его:
-```
-$ bash *.sh
-``` 
+1. Проверить, что python3 установлен: `$ python3 --version`
+2. Установить Anaconda (дистрибутив Python) - скачать sh-файл с сайта и запустить его: `$ bash *.sh`
 В конце установки написать "yes", чтобы Conda запускалась автоматически при запуске терминала.
 3. https://developer.nvidia.com/how-to-cuda-python
 4. Установить пакеты Python https://pyprog.pro/installing_numpy.html
