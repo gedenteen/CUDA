@@ -4,7 +4,7 @@ from timeit import default_timer as timer
 from numba import cuda
 from numba import *
 
-@cuda.jit(restype=uint32, argtypes=[f8, f8, uint32], device=True)
+@cuda.jit(uint32(f8, f8, uint32), device=True)
 def mandel(x, y, max_iters):
 	c = complex(x, y)
 	z = 0.0j
@@ -14,7 +14,7 @@ def mandel(x, y, max_iters):
 			return i
 	return max_iters
 
-@cuda.jit(argtypes=[f8, f8, f8, f8, uint8[:,:], uint32])
+@cuda.jit((f8, f8, f8, f8, uint8[:,:], uint32))
 def create_fractal(min_x, max_x, min_y, max_y, image, iters):
 	height = image.shape[0] #размерности двумерного массива
 	width = image.shape[1]
@@ -39,10 +39,10 @@ griddim = (32,16)
 
 d_image = cuda.to_device(image)
 create_fractal[griddim, blockdim](-2.0, 1.0, -1.0, 1.0, d_image, 20)
-d_image.to_host()
+#d_image.to_host()
 
 start = timer()
-create_fractal(-2.0, 1.0, -1.0, 1.0, image, 20)
+create_fractal[blockdim, griddim](-2.0, 1.0, -1.0, 1.0, image, 20)
 dt = timer() - start
 print ("Mandelbrot created in %f s" % dt)
 imshow(image)

@@ -1,7 +1,7 @@
 import numpy as np
 from pylab import imshow, show
 from timeit import default_timer as timer
-from numba import autojit
+from numba import jit as autojit #from numba import autojit
 
 @autojit
 def mandel(x, y, max_iters):
