@@ -15,12 +15,12 @@ const unsigned int window_height = 512;
 
 int main(){
 	initGL();
-	initBuffer();
+	initBuffer(); //функция из util_template.cpp
 	do {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		//glClearColor(0.7,0.7,0.7,1.0);
 		glPointSize(6);
-		display();
+		display(); //основная функция
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	} while (glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
