@@ -35,7 +35,7 @@ __device__ uint8_t mandel(float x, float y, int max_iters) {
 	struct complex c; //c = complex(x, y)
 	c.real = x, c.imag = y;
 	struct complex z; //z = 0.0j
-	z.real = z.imag = 0;
+	z.real = z.imag = 0.0f;
 	for (int i = 0; i < max_iters; i++) {
 		z = complex_mul(z, z); //z = z*z + c; //отображение Мандельброта
 		z = complex_sum(z, c);
@@ -44,45 +44,32 @@ __device__ uint8_t mandel(float x, float y, int max_iters) {
 	}
 	return max_iters;
 }
-/*
-__host__ void create_fractal(float min_x, float max_x, float min_y, float max_y, 
-	uint8_t *&image, int height, int width, int iters) 
-{
-	float pixel_size_x = (max_x - min_x) / width; //задание размеров пикселя
-	float pixel_size_y = (max_y - min_y) / height;
-	
-	for (int x = 0; x < width; x++) {
-		float real = min_x + x * pixel_size_x;
-		for (int y = 0; y < height; y++) {
-			float imag = min_y + y * pixel_size_y;
-			uint8_t color = mandel(real, imag, iters);
-			image[y * height + x] = color; //задание цвета пикселя
-		}
-	}
-}
-*/
+
 __global__ void create_fractal_dev(float min_x, float max_x, float min_y, float max_y, 
 	uint8_t *image, int height, int width, int iters) 
 {
-	float pixel_size_x = float(max_x - min_x) / float(width); //задание размеров пикселя
-	float pixel_size_y = float(max_y - min_y) / float(height);
+	float pixel_size_x = (max_x - min_x) / (width); //задание размеров пикселя
+	float pixel_size_y = (max_y - min_y) / (height);
 	
-	int y = threadIdx.x + blockIdx.x * blockDim.x;
-	int x = threadIdx.y + blockIdx.y * blockDim.y;
-	if (y < height && x < width) {
-		float real = min_x + float(x) * pixel_size_x;
-		float imag = min_y + float(y) * pixel_size_y;
-		uint8_t color = mandel(real, imag, iters);
-		image[y * height + x] = color; //задание цвета пикселя
-	}
-}
+	int startX = threadIdx.x + blockDim.x * blockIdx.x;
+	int startY = threadIdx.y + blockDim.y * blockIdx.y;
+	int gridX = gridDim.x * blockDim.x;
+	int gridY = gridDim.y * blockDim.y;
 
-#define BLOCK_DIM 2 //размер субматрицы
+	for (int x = startX; x < width; x += gridX) {
+		float real = min_x + x * pixel_size_x;
+		for (int y = startY; y < height; y += gridY) {
+			float imag = min_y + y * pixel_size_y;
+			uint8_t color = mandel(real, imag, iters);
+			image[x + y * width] = color; //задание цвета пикселя
+		}
+	} 
+}
 
 int main() {
 	/// размерности массивов:
 	int N = 1024, M = 1536; //размерности массива
-	const size_t size_in_bytes = (N * M * sizeof(uint8_t));
+	const size_t size_in_bytes = N * M * sizeof(uint8_t);
 	
 	/// создание массивов:
 	uint8_t *A_dev;
@@ -92,10 +79,9 @@ int main() {
 	A_hos = (uint8_t*) malloc(size_in_bytes);
 	cudaMemset(A_hos, 0, size_in_bytes); //заполнить нулями
 
-	////////////////////////////////////
-	dim3 dimBlock(BLOCK_DIM, BLOCK_DIM); //число выделенных блоков
-	dim3 dimGrid((N+dimBlock.x-1)/dimBlock.x, (M+dimBlock.y-1)/dimBlock.y); //размер и размерность сетки
-	printf("dimGrid.x = %d, dimGrid.y = %d\n", dimGrid.x, dimGrid.y); //выводится размер сетки
+	/// как расспараллелить код
+	dim3 dimBlock(32, 8); //число выделенных блоков
+	dim3 dimGrid(32,16); //размер и размерность сетки
 	
 	/// создание CUDA-событий
 	cudaEvent_t start, stop;
@@ -103,8 +89,7 @@ int main() {
 	CUDA_CHECK_RETURN(cudaEventCreate(&stop));
 	
 	/// запуск ядра
-	CUDA_CHECK_RETURN(cudaEventRecord(start, 0));
-		//create_fractal(-2.0, 1.0, -1.0, 1.0, A_hos, N, M, 20); //N, M?
+	cudaEventRecord(start, 0);
 		create_fractal_dev <<<dimGrid,dimBlock >>> (-2.0, 1.0, -1.0, 1.0, A_dev, N, M, 20);
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop);
@@ -119,7 +104,7 @@ int main() {
 	FILE *fp = fopen("rez.dat", "w");
 	for (int i = 0; i < N; i++) {
 		for (int j = 0; j < M; j++) {
-			fprintf(fp, "%d ", A_hos[i * N + j]);  
+			fprintf(fp, "%d ", A_hos[i * M + j]);  
 		}
 		fprintf(fp, "\n");
 	}
@@ -134,6 +119,5 @@ int main() {
 	rez = complex_sum(z1, z2);
 	printf("%f %f \n", rez.real, rez.imag);
 	*/
-	printf("end\n");
 	return 0;
 }
