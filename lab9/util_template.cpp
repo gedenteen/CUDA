@@ -1,29 +1,13 @@
-#include <GL/glew.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string>
+#include "constants.h"
 
 #include <glm/vec3.hpp> // glm::vec3
 #include <glm/vec4.hpp> // glm::vec4
 #include <glm/mat4x4.hpp> // glm::mat4
 #include <glm/gtc/matrix_transform.hpp>
 
-void checkErrors(std::string desc) { //||||||возможно это лучше перенести в sh_template.cpp
-	GLenum e = glGetError();
-	if (e != GL_NO_ERROR) {
-		fprintf(stderr, "OpenGL error in \"%s\": %s (%d)\n", desc.c_str(),
-		gluErrorString(e), e);
-		exit(20);
-	}
-}
-
-const unsigned int window_width = 512;
-const unsigned int window_height = 512;
-
 GLuint bufferID;
 GLuint progHandle;
 GLuint genRenderProg();
-const int num_of_verticies = 3;
 
 int initBuffer() { //выделяем память, делаем ее текущей, инициализируем 
 	glGenBuffers(1, &bufferID); //выделение памяти(кол-во буферов, массив идентификаторов)
@@ -36,7 +20,7 @@ int initBuffer() { //выделяем память, делаем ее текущ
 	};
 	glBufferData( //выделить память и скопировать туда созданный массив
 		GL_ARRAY_BUFFER, //тип памяти
-		6*num_of_verticies*sizeof(float), //размер памяти
+		6 * num_of_verticies*sizeof(float), //размер памяти
 		vertex_buffer_data, //указатель на хосте
 		GL_STATIC_DRAW); //только для чтения
 	//glBindBuffer(GL_ARRAY_BUFFER, inA);
@@ -47,7 +31,7 @@ void camera() {
 	glm::mat4 Projection = glm::perspective(glm::radians(60.0f),
 		(float) window_width / (float)window_height, 0.1f, 0.0f);
 	glm::mat4 View = glm::lookAt( //местонахождение камеры
-		glm::vec3(1,1,2), // Камера находится в точке (x,y,z)
+		glm::vec3(0,1,1), // Камера находится в точке (x,y,z)
 		glm::vec3(0,0,0), // и направлена на начало координат.
 		glm::vec3(0,1,0) // Ось Y направлена вверх, ( 0,-1,0) - вниз.
 	);

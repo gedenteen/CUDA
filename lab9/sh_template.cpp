@@ -1,9 +1,13 @@
-#include <GL/glew.h>
-#include <stdio.h>
-#include <string>
-#include <stdlib.h>
+#include "constants.h"
 
-void checkErrors(std::string desc);
+void checkErrors(std::string desc) { 
+	GLenum e = glGetError();
+	if (e != GL_NO_ERROR) {
+		fprintf(stderr, "OpenGL error in \"%s\": %s (%d)\n", desc.c_str(),
+		gluErrorString(e), e);
+		exit(20);
+	}
+}
 
 GLuint genRenderProg() { 
 	//создаем шейдер - код в виде строки комплириуем и компонуем
@@ -17,7 +21,7 @@ GLuint genRenderProg() {
 		//версия вершинного шейдера
 		//переменные (pos, color) длины 3
 		//out = переменная будет передана фрагментному шейдеру
-		//
+		////матрица конечная - как и откуда смотрим
 		//void main()
 			//gl_Poition - это встроенная переменная; расширяем позицию до 4-мерного 
 			//4 координата для сдвижения в пространстве
@@ -46,7 +50,7 @@ GLuint genRenderProg() {
 		vp, //дескриптор шейдера
 		2, //сколько строк
 		vpSrc, //массив строк
-		NULL);
+		NULL); //массив длин строк
 	glShaderSource(fp, 2, fpSrc, NULL);
 
 	glCompileShader(vp); //комплируем шейдер
