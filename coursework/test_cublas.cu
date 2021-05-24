@@ -1,6 +1,6 @@
 #include "header.h"
 
-float test_cublas(long int arr_size, float alpha, int iterations, 
+float saxpy_cublas(long int arr_size, float alpha, int iterations, 
 	cudaEvent_t start, cudaEvent_t stop, int check_arrays) 
 { 
 	/// создание массивов:
@@ -32,14 +32,10 @@ float test_cublas(long int arr_size, float alpha, int iterations,
 	//хоста на устройство
 	cublasSetMatrix(num_rows, num_cols, elem_size, X_hos,
 		num_rows, X_dev, num_rows); //leading dimension
-	
-	//Очищаем массив на устройстве
 	cudaMemset(Y_dev, 0, size_in_bytes);
 	
-	// выполнение SingleAlphaXPlusY (saxpy)
-	const int stride = 1; //шаг (каждый stride элемент берется из массива)
-	
 	/// запуск SAXPY на разных размерах массивов
+	const int stride = 1; //шаг (каждый stride элемент берется из массива)
 	float _time, time_sum = 0.0f; //затраченное время на SAXPY
 	long int tmp_size = arr_size; //размер массива, который на каждой итерации уменьшаться вдвое
 	for (int i = 0; i < iterations; tmp_size = tmp_size >> 1, i++) {
@@ -52,7 +48,7 @@ float test_cublas(long int arr_size, float alpha, int iterations,
 		
 		if (check_arrays) {
 			printf("size of arrays = %ld\n", tmp_size); 
-			printf("CUDA time = %f ms\n", _time);
+			printf("cuBLAS time = %f ms\n", _time);
 		}
 	}
 	
@@ -74,4 +70,92 @@ float test_cublas(long int arr_size, float alpha, int iterations,
 	
 	/// вернуть среднее время выполнения SAXPY:
 	return time_sum / iterations;
+}
+
+void copying_cublas(long int arr_size, int iterations, int check_arrays,
+	cudaEvent_t start, cudaEvent_t stop,
+	float *timeDevToDev, float *timeDevToHosUsual, float *timeDevToHosPaged)  
+{
+	/// выделение памяти:
+	float *host_usual_arr, *host_paged_arr, *dev1_arr, *dev2_arr;
+    //выделение обычной памяти на хосте:
+	long int size_in_bytes = arr_size * sizeof(float);
+    host_usual_arr = (float*)malloc(size_in_bytes);
+    //выделение закрепленной (paged-locked) памяти на хосте:
+    cudaHostAlloc((void**)&host_paged_arr, size_in_bytes, cudaHostAllocDefault);
+    //выделение памяти на девайсе:
+    cudaMalloc((void**)&dev1_arr, size_in_bytes);
+    cudaMalloc((void**)&dev2_arr, size_in_bytes);
+	
+	/// инициализация библиотеки CUBLAS:
+	cublasHandle_t cublas_handle;
+	CUBLAS_CHECK_RETURN(cublasCreate(&cublas_handle));
+	
+	/// заполнение массивов:
+	for (int i=0; i < arr_size; i++) { //заполнить массив последовательностью
+		host_usual_arr[i] = (float)i;
+	}
+	const int num_rows = arr_size; //arr_size
+	const int num_cols = 1; //1
+	const size_t elem_size = sizeof(float);
+	cublasSetMatrix(num_rows, num_cols, elem_size, host_usual_arr,
+		num_rows, dev1_arr, num_rows); //leading dimension
+	memset(host_usual_arr, 0, size_in_bytes); //убрать последовательность из массива, занулить
+	cudaMemset(dev2_arr, 0, size_in_bytes);
+    	
+    /// копирование массива с разными размерностями 
+	const int stride = 1; //шаг (каждый stride элемент берется из массива)
+	float _time; //затраченное время
+	long int tmp_size = arr_size; //размер массива, который на каждой итерации уменьшаться вдвое
+	for (int i = 0; i < iterations; tmp_size = tmp_size >> 1, i++) {
+		cudaEventRecord(start, 0);
+    	cublasScopy(cublas_handle, tmp_size, dev1_arr, stride, dev1_arr, stride);
+		cudaEventRecord(stop, 0);
+		cudaEventSynchronize(stop);
+		cudaEventElapsedTime(&_time, start, stop);
+		*timeDevToDev += _time;
+		
+		if (check_arrays) {
+			printf("size of arrays = %ld\n", tmp_size); 
+			printf("copying device to device, cuBLAS time = %f ms\n", _time);
+		}
+		
+		cudaEventRecord(start, 0);
+		cublasGetMatrix(tmp_size, num_cols, elem_size,
+                dev1_arr, tmp_size, host_usual_arr, tmp_size);
+		cudaEventRecord(stop, 0);
+		cudaEventSynchronize(stop);
+		cudaEventElapsedTime(&_time, start, stop);
+		*timeDevToHosUsual += _time;
+		
+		if (check_arrays) {
+			printf("size of arrays = %ld\n", tmp_size); 
+			printf("copying device to host usual, cuBLAS time = %f ms\n", _time);
+		}
+		
+		cudaEventRecord(start, 0);
+		cublasGetMatrix(tmp_size, num_cols, elem_size,
+                dev1_arr, tmp_size, host_paged_arr, tmp_size);
+		cudaEventRecord(stop, 0);
+		cudaEventSynchronize(stop);
+		cudaEventElapsedTime(&_time, start, stop);
+		*timeDevToHosPaged += _time;
+		
+		if (check_arrays) {
+			printf("size of arrays = %ld\n", tmp_size); 
+			printf("copying device to host paged, cuBLAS time = %f ms\n", _time);
+		}
+	}
+	
+	/// освобождение ресурсов:
+	cublasDestroy(cublas_handle);
+	cudaFree(dev1_arr);
+	cudaFree(dev2_arr);
+	cudaFreeHost(host_usual_arr);
+	cudaFreeHost(host_paged_arr);
+	
+	/// вычисление среднего времени
+	*timeDevToDev /= iterations;
+	*timeDevToHosUsual /= iterations;
+	*timeDevToHosPaged /= iterations;
 }
