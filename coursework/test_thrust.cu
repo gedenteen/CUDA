@@ -17,8 +17,8 @@ void saxpy(float a, thrust::device_vector<float>& x,
 	thrust::transform(x.begin(), x.end(), y.begin(), y.begin(), func);
 }
 
-float saxpy_thrust(long int arr_size, float alpha, int iterations, 
-	cudaEvent_t start, cudaEvent_t stop, int check_arrays) 
+void saxpy_thrust(long int arr_size, float alpha, int iterations, 
+                  cudaEvent_t start, cudaEvent_t stop, int check_arrays, float *time_arr)
 {
 	/// создание и заполнение векторов векторов:
 	thrust::host_vector<float> X_hos(arr_size);
@@ -29,24 +29,24 @@ float saxpy_thrust(long int arr_size, float alpha, int iterations,
 	thrust::device_vector<float> Y_dev = Y_hos;
 	
 	/// запуск SAXPY на разных размерах массивов
-	float _time, time_sum = 0.0f; //затраченное время на SAXPY
+	float _time; //затраченное время на SAXPY
 	long int tmp_size = arr_size; //размер массива, который на каждой итерации уменьшаться вдвое
 	for (int i = 0; i < iterations; tmp_size = tmp_size >> 1, i++) {
 		X_dev.resize(tmp_size);
 		Y_dev.resize(tmp_size);
 	
 		cudaEventRecord(start, 0);
-		saxpy(alpha, X_dev, Y_dev);
+		for (int j = 0; j < 9; j++) //saxpy вызывается несколько раз для большей точности по времени
+			saxpy(alpha, X_dev, Y_dev);
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
-		time_sum += _time;
 		
+		_time /= 9;
+		time_arr[i * TA_COLS + 1] = _time;
 		
-		if (check_arrays) {
-			printf("size of arrays = %ld\n", tmp_size); 
-			printf("Thrust time = %f ms\n", _time);
-		}
+		if (check_arrays) 
+			printf("size of arrays = %ld, Thrust time = %f ms\n", tmp_size, _time);
 	}
 	
 	/// проверка:
@@ -57,14 +57,12 @@ float saxpy_thrust(long int arr_size, float alpha, int iterations,
 			printf("i = %d;\t X[i] = %g;\t Y[i] = %g\n", i, X_hos[i], Y_hos[i]);
 		}
 	}
-	
-	/// вернуть среднее время выполнения SAXPY:
-	return time_sum / iterations;
+	if (check_arrays)
+		printf("\n");
 }
 
 void copying_thrust(long int arr_size, int iterations, int check_arrays,
-	cudaEvent_t start, cudaEvent_t stop,
-	float *timeDevToDev, float *timeDevToHos) 
+                    cudaEvent_t start, cudaEvent_t stop, float *time_arr)
 {
 	/// создание и заполнение векторов векторов:
 	thrust::host_vector<float> X_hos(arr_size);
@@ -81,11 +79,14 @@ void copying_thrust(long int arr_size, int iterations, int check_arrays,
 		Y_dev.resize(tmp_size);
 	
 		cudaEventRecord(start, 0);
-		Y_dev = X_dev;
+		for (int j = 0; j < 3; j++) //копирование вызывается несколько раз для большей точности по времени
+			Y_dev = X_dev;
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
-		*timeDevToDev += _time;
+		
+		_time /= 3;
+		time_arr[i * TA_COLS + 4] = _time;
 		
 		if (check_arrays) {
 			printf("size of arrays = %ld\n", tmp_size); 
@@ -93,20 +94,19 @@ void copying_thrust(long int arr_size, int iterations, int check_arrays,
 		}
 		
 		cudaEventRecord(start, 0);
-		X_hos = X_dev;
+		for (int j = 0; j < 3; j++) //копирование вызывается несколько раз для большей точности по времени
+			X_hos = X_dev;
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
-		*timeDevToHos += _time;
+		
+		_time /= 3;
+		time_arr[i * TA_COLS + 7] = _time;
 		
 		if (check_arrays) {
 			printf("size of arrays = %ld\n", tmp_size); 
 			printf("copying device to host, Thrust time = %f ms\n", _time);
 		}
 	}
-	
-	/// вернуть среднее время выполнения SAXPY:
-	*timeDevToDev /= iterations;
-	*timeDevToHos /= iterations;
 }
 

@@ -15,7 +15,7 @@ test_cublas.o: test_cublas.cu
 .PHONY: all clean run
 
 run:
-	./main.exe
+	./main.exe && gnuplot graph.gpi
 
 clean:
 	rm -rf *.o *.exe

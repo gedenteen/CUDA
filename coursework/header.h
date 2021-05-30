@@ -29,22 +29,21 @@
 	}\
 } //макрос для обработки ошибок CUBLAS
 
-float saxpy_cuda(long int arr_size, float alpha, int iterations, 
-                 cudaEvent_t start, cudaEvent_t stop, int check_arrays);
+#define TA_COLS 11 //количество столбцов в массиве time_arr
+
+void saxpy_cuda(long int arr_size, float alpha, int iterations, 
+                cudaEvent_t start, cudaEvent_t stop, int check_arrays, float *time_arr);
 void copying_cuda(long int arr_size, int iterations, int check_arrays,
-                  cudaEvent_t start, cudaEvent_t stop,
-                  float *timeDevToDev, float *timeDevToHosUsual, float *timeDevToHosPaged);
+                  cudaEvent_t start, cudaEvent_t stop, float *time_arr);
 	
-float saxpy_thrust(long int arr_size, float alpha, int iterations, 
-                   cudaEvent_t start, cudaEvent_t stop, int check_arrays);
+void saxpy_thrust(long int arr_size, float alpha, int iterations, 
+                  cudaEvent_t start, cudaEvent_t stop, int check_arrays, float *time_arr);
 void copying_thrust(long int arr_size, int iterations, int check_arrays,
-                    cudaEvent_t start, cudaEvent_t stop,
-                    float *timeDevToDev, float *timeDevToHos);
+                    cudaEvent_t start, cudaEvent_t stop, float *time_arr);
 	
-float saxpy_cublas(long int arr_size, float alpha, int iterations, 
-                   cudaEvent_t start, cudaEvent_t stop, int check_arrays);
-void copying_cublas(long int arr_size, int iterations,  int check_arrays,
-                    cudaEvent_t start, cudaEvent_t stop,
-                    float *timeDevToDev, float *timeDevToHosUsual, float *timeDevToHosPaged);
+void saxpy_cublas(long int arr_size, float alpha, int iterations, 
+                  cudaEvent_t start, cudaEvent_t stop, int check_arrays, float *time_arr);
+void copying_cublas(long int arr_size, int iterations, int check_arrays,
+                    cudaEvent_t start, cudaEvent_t stop, float *time_arr);
 
 #endif

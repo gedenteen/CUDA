@@ -1,7 +1,7 @@
 #include "header.h"
 
-float saxpy_cublas(long int arr_size, float alpha, int iterations, 
-	cudaEvent_t start, cudaEvent_t stop, int check_arrays) 
+void saxpy_cublas(long int arr_size, float alpha, int iterations, 
+                  cudaEvent_t start, cudaEvent_t stop, int check_arrays, float *time_arr)
 { 
 	/// создание массивов:
 	long int size_in_bytes = arr_size * sizeof(float);
@@ -36,20 +36,21 @@ float saxpy_cublas(long int arr_size, float alpha, int iterations,
 	
 	/// запуск SAXPY на разных размерах массивов
 	const int stride = 1; //шаг (каждый stride элемент берется из массива)
-	float _time, time_sum = 0.0f; //затраченное время на SAXPY
+	float _time; //затраченное время на SAXPY
 	long int tmp_size = arr_size; //размер массива, который на каждой итерации уменьшаться вдвое
 	for (int i = 0; i < iterations; tmp_size = tmp_size >> 1, i++) {
 		cudaEventRecord(start, 0);
-		cublasSaxpy(cublas_handle, tmp_size, &alpha, X_dev, stride, Y_dev, stride);
+		for (int j = 0; j < 9; j++) //saxpy вызывается несколько раз для большей точности по времени
+			cublasSaxpy(cublas_handle, tmp_size, &alpha, X_dev, stride, Y_dev, stride);
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
-		time_sum += _time;
 		
-		if (check_arrays) {
-			printf("size of arrays = %ld\n", tmp_size); 
-			printf("cuBLAS time = %f ms\n", _time);
-		}
+		_time /= 9;
+		time_arr[i * TA_COLS + 2] = _time;
+		
+		if (check_arrays) 
+			printf("size of arrays = %ld, cuBLAS time = %f ms\n", tmp_size, _time);
 	}
 	
 	/// проверка:
@@ -60,6 +61,8 @@ float saxpy_cublas(long int arr_size, float alpha, int iterations,
 			printf("i = %d;\t X[i] = %g;\t Y[i] = %g\n", i, X_hos[i], Y_hos[i]);
 		}
 	}
+	if (check_arrays)
+		printf("\n");
 	
 	/// освобождение ресурсов:
 	cublasDestroy(cublas_handle);
@@ -67,14 +70,10 @@ float saxpy_cublas(long int arr_size, float alpha, int iterations,
 	cudaFree(Y_dev);
 	cudaFreeHost(X_hos);
 	cudaFreeHost(Y_hos);
-	
-	/// вернуть среднее время выполнения SAXPY:
-	return time_sum / iterations;
 }
 
 void copying_cublas(long int arr_size, int iterations, int check_arrays,
-	cudaEvent_t start, cudaEvent_t stop,
-	float *timeDevToDev, float *timeDevToHosUsual, float *timeDevToHosPaged)  
+                    cudaEvent_t start, cudaEvent_t stop, float *time_arr)  
 {
 	/// выделение памяти:
 	float *host_usual_arr, *host_paged_arr, *dev1_arr, *dev2_arr;
@@ -109,11 +108,14 @@ void copying_cublas(long int arr_size, int iterations, int check_arrays,
 	long int tmp_size = arr_size; //размер массива, который на каждой итерации уменьшаться вдвое
 	for (int i = 0; i < iterations; tmp_size = tmp_size >> 1, i++) {
 		cudaEventRecord(start, 0);
-    	cublasScopy(cublas_handle, tmp_size, dev1_arr, stride, dev1_arr, stride);
+    	for (int j = 0; j < 3; j++) //копирование вызывается несколько раз для большей точности по времени
+			cublasScopy(cublas_handle, tmp_size, dev1_arr, stride, dev1_arr, stride);
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
-		*timeDevToDev += _time;
+		
+		_time /= 3;
+		time_arr[i * TA_COLS + 5] = _time;
 		
 		if (check_arrays) {
 			printf("size of arrays = %ld\n", tmp_size); 
@@ -121,12 +123,14 @@ void copying_cublas(long int arr_size, int iterations, int check_arrays,
 		}
 		
 		cudaEventRecord(start, 0);
-		cublasGetMatrix(tmp_size, num_cols, elem_size,
-                dev1_arr, tmp_size, host_usual_arr, tmp_size);
+		for (int j = 0; j < 3; j++) //копирование вызывается несколько раз для большей точности по времени
+			cublasGetMatrix(tmp_size, num_cols, elem_size, dev1_arr, tmp_size, host_usual_arr, tmp_size);
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
-		*timeDevToHosUsual += _time;
+		
+		_time /= 3;
+		time_arr[i * TA_COLS + 8] = _time;
 		
 		if (check_arrays) {
 			printf("size of arrays = %ld\n", tmp_size); 
@@ -134,12 +138,14 @@ void copying_cublas(long int arr_size, int iterations, int check_arrays,
 		}
 		
 		cudaEventRecord(start, 0);
-		cublasGetMatrix(tmp_size, num_cols, elem_size,
-                dev1_arr, tmp_size, host_paged_arr, tmp_size);
+		for (int j = 0; j < 3; j++) //копирование вызывается несколько раз для большей точности по времени
+			cublasGetMatrix(tmp_size, num_cols, elem_size, dev1_arr, tmp_size, host_paged_arr, tmp_size);
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
-		*timeDevToHosPaged += _time;
+		
+		_time /= 3;
+		time_arr[i * TA_COLS + 9] = _time;
 		
 		if (check_arrays) {
 			printf("size of arrays = %ld\n", tmp_size); 
@@ -153,9 +159,4 @@ void copying_cublas(long int arr_size, int iterations, int check_arrays,
 	cudaFree(dev2_arr);
 	cudaFreeHost(host_usual_arr);
 	cudaFreeHost(host_paged_arr);
-	
-	/// вычисление среднего времени
-	*timeDevToDev /= iterations;
-	*timeDevToHosUsual /= iterations;
-	*timeDevToHosPaged /= iterations;
 }

@@ -7,8 +7,8 @@ __global__ void saxpy(int arr_size, float alpha, float *x, float *y)
 		y[i] = alpha * x[i] + y[i];
 }
 
-float saxpy_cuda(long int arr_size, float alpha, int iterations, 
-	cudaEvent_t start, cudaEvent_t stop, int check_arrays)  
+void saxpy_cuda(long int arr_size, float alpha, int iterations, 
+	cudaEvent_t start, cudaEvent_t stop, int check_arrays, float *time_arr)  
 {
 	/// создание массивов:
 	long int size_in_bytes = arr_size * sizeof(float);
@@ -32,20 +32,24 @@ float saxpy_cuda(long int arr_size, float alpha, int iterations,
 	cudaMemcpy(Y_dev, Y_hos, size_in_bytes, cudaMemcpyHostToDevice);
 
 	/// запуск SAXPY на разных размерах массивов
-	float _time, time_sum = 0.0f; //затраченное время на SAXPY
+	float _time; //затраченное время на SAXPY
 	long int tmp_size = arr_size; //размер массива, который на каждой итерации уменьшаться вдвое
 	for (int i = 0; i < iterations; tmp_size = tmp_size >> 1, i++) {
 		cudaEventRecord(start, 0);
-		saxpy <<< tmp_size / 256, 256 >>> (tmp_size, alpha, X_dev, Y_dev);
+		for (int j = 0; j < 9; j++) //saxpy вызывается несколько раз для большей точности по времени
+		{
+			saxpy <<< tmp_size / 256, 256 >>> (tmp_size, alpha, X_dev, Y_dev);
+			cudaDeviceSynchronize(); //синхронизация потоков
+		}
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
-		time_sum += _time;
+
+		_time /= 9; //посчитать среднее время выполнения saxpy
+		time_arr[i * TA_COLS] = _time; //записать время в общий массив
 		
-		if (check_arrays) {
-			printf("size of arrays = %ld\n", tmp_size); 
-			printf("CUDA time = %f ms\n", _time);
-		}
+		if (check_arrays) 
+			printf("size of arrays = %ld, CUDA time = %f ms\n", tmp_size, _time);
 	}
 	
 	/// проверка:
@@ -56,15 +60,14 @@ float saxpy_cuda(long int arr_size, float alpha, int iterations,
 			printf("i = %d;\t X[i] = %g;\t Y[i] = %g\n", i, X_hos[i], Y_hos[i]);
 		}
 	}
+	if (check_arrays)
+		printf("\n");
 	
 	/// освобождение ресурсов:
 	cudaFree(X_dev);
 	cudaFree(Y_dev);
 	cudaFreeHost(X_hos);
 	cudaFreeHost(Y_hos);
-	
-	/// вернуть среднее время выполнения SAXPY:
-	return time_sum / iterations;
 }
 
 __global__ void gInitArray(long int arr_size, float* arr) {
@@ -75,33 +78,33 @@ __global__ void gInitArray(long int arr_size, float* arr) {
 }
 
 void copying_cuda(long int arr_size, int iterations, int check_arrays,
-	cudaEvent_t start, cudaEvent_t stop,
-	float *timeDevToDev, float *timeDevToHosUsual, float *timeDevToHosPaged) 
+	cudaEvent_t start, cudaEvent_t stop, float *time_arr) 
 {
+	/// создание массивов:
     float *host_usual_arr, *host_paged_arr, *dev1_arr, *dev2_arr;
-
-    //выделение обычной памяти на хосте:
-	long int size_in_bytes = arr_size * sizeof(float);
-    host_usual_arr = (float*)malloc(size_in_bytes);
-    //выделение закрепленной (paged-locked) памяти на хосте:
-    cudaHostAlloc((void**)&host_paged_arr, size_in_bytes, cudaHostAllocDefault);
-    //выделение памяти на девайсе:
-    cudaMalloc((void**)&dev1_arr, size_in_bytes);
+	long int size_in_bytes = arr_size * sizeof(float); 
+    host_usual_arr = (float*)malloc(size_in_bytes); //выделение обычной памяти на хосте
+    cudaHostAlloc((void**)&host_paged_arr, size_in_bytes, cudaHostAllocDefault); //выделение закрепленной (paged-locked) памяти на хосте
+    cudaMalloc((void**)&dev1_arr, size_in_bytes); //выделение памяти на девайсе
     cudaMalloc((void**)&dev2_arr, size_in_bytes);
 
-    gInitArray <<< arr_size / 256, 256 >>> (arr_size, dev1_arr);
+	/// заполнение массива:
+    gInitArray <<< arr_size / 256, 256 >>> (arr_size, dev1_arr); 
     cudaDeviceSynchronize();
     
-    /// запуск на разных размерах массивов
+    /// запуск на разных размерах массивов:
 	float _time; //затраченное время
 	long int tmp_size = arr_size; //размер массива, который на каждой итерации уменьшаться вдвое
 	for (int i = 0; i < iterations; tmp_size = tmp_size >> 1, i++) {
 		cudaEventRecord(start, 0);
-		cudaMemcpy(dev2_arr, dev1_arr, tmp_size * sizeof(float), cudaMemcpyDeviceToDevice);
+		for (int j = 0; j < 3; j++) //копирование вызывается несколько раз для большей точности по времени
+			cudaMemcpy(dev2_arr, dev1_arr, tmp_size * sizeof(float), cudaMemcpyDeviceToDevice);
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
-		*timeDevToDev += _time;
+		
+		_time /= 3;
+		time_arr[i * TA_COLS + 3] = _time;
 		
 		if (check_arrays) {
 			printf("size of arrays = %ld\n", tmp_size); 
@@ -109,11 +112,14 @@ void copying_cuda(long int arr_size, int iterations, int check_arrays,
 		}
 		
 		cudaEventRecord(start, 0);
-    	cudaMemcpy(host_usual_arr, dev1_arr, tmp_size * sizeof(float), cudaMemcpyDeviceToHost);
+		for (int j = 0; j < 3; j++) //копирование вызывается несколько раз для большей точности по времени
+    		cudaMemcpy(host_usual_arr, dev1_arr, tmp_size * sizeof(float), cudaMemcpyDeviceToHost);
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
-		*timeDevToHosUsual += _time;
+		
+		_time /= 3;
+		time_arr[i * TA_COLS + 6] = _time;
 		
 		if (check_arrays) {
 			printf("size of arrays = %ld\n", tmp_size); 
@@ -121,11 +127,14 @@ void copying_cuda(long int arr_size, int iterations, int check_arrays,
 		}
 		
 		cudaEventRecord(start, 0);
-		cudaMemcpy(host_paged_arr, dev1_arr, tmp_size * sizeof(float), cudaMemcpyDeviceToHost);
+		for (int j = 0; j < 3; j++) //копирование вызывается несколько раз для большей точности по времени
+			cudaMemcpy(host_paged_arr, dev1_arr, tmp_size * sizeof(float), cudaMemcpyDeviceToHost);
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
-		*timeDevToHosPaged += _time;
+		
+		_time /= 3;
+		time_arr[i * TA_COLS + 7] = _time;
 		
 		if (check_arrays) {
 			printf("size of arrays = %ld\n", tmp_size); 
@@ -138,9 +147,4 @@ void copying_cuda(long int arr_size, int iterations, int check_arrays,
 	cudaFree(dev2_arr);
 	cudaFreeHost(host_usual_arr);
 	cudaFreeHost(host_paged_arr);
-	
-	/// вернуть среднее время выполнения SAXPY:
-	*timeDevToDev /= iterations;
-	*timeDevToHosUsual /= iterations;
-	*timeDevToHosPaged /= iterations;
 }
