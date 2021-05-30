@@ -48,29 +48,36 @@ int main(int argc, char *argv[]) {
 	}
 	
 	/// посчитать среднее время и вывести результаты:
-	printf("   SAXPY\n");
+	printf("performing saxpy_Thrust...\n");
 	saxpy_thrust(arr_size, alpha, iterations, start, stop, check_arrays, time_arr);
+	printf("performing saxpy_cuBLAS...\n");
 	saxpy_cublas(arr_size, alpha, iterations, start, stop, check_arrays, time_arr);
+	printf("performing saxpy_CUDA...\n");
 	saxpy_cuda(arr_size, alpha, iterations, start, stop, check_arrays, time_arr);
 	
+	printf("performing copying_Thrust...\n");
 	copying_thrust(arr_size, iterations, check_arrays, start, stop, time_arr);
-	copying_cuda(arr_size, iterations, check_arrays, start, stop, time_arr); //если Куду поместить выше Траста, то ломается...	
+	printf("performing copying_cuBLAS...\n");
 	copying_cublas(arr_size, iterations, check_arrays, start, stop, time_arr);
+	printf("performing copying_CUDA...\n");
+	copying_cuda(arr_size, iterations, check_arrays, start, stop, time_arr); //если Куду поместить выше Траста, то ломается...	
 	
-	/*
-	for (int i = 0; i < iterations; i++) {
-		for (int j = 0; j < TA_COLS; j++) 
-			printf("%g ", time_arr[i * TA_COLS + j]);
-		printf("\n");
-	}*/
-	
+	///открытие файла, чтобы записать туда time_arr[]
 	FILE *fp;
 	fp = fopen("graphs/time.csv", "w");
 	if (fp == NULL) {
 		fprintf(stderr, "error: can't open graphs/time.dat\n");
 		exit(EXIT_FAILURE); 
 	}
-	///TODO: подписи к столбцам
+	
+	/// подписи к столбцам в .csv файле
+	fprintf(fp, "arr_size;saxpy_CUDA;saxpy_Thrust;saxpy_cuBLAS;");
+	fprintf(fp, "dev_to_dev_CUDA;dev_to_dev_Thrust;dev_to_dev_cuBLAS;");
+	fprintf(fp, "dev_to_usual_host_CUDA;dev_to_paged_host_CUDA;");
+	fprintf(fp, "dev_to_host_Thrust;");
+	fprintf(fp, "dev_to_usual_host_cuBLAS;dev_to_paged_host_cuBLAS\n");
+	
+	/// запись полученного времени из массива в файл:
 	for (int i = 0; i < iterations; i++) {
 		fprintf(fp, "%d;", degree - i);
 		for (int j = 0; j < TA_COLS; j++) {
@@ -85,16 +92,36 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "error: can't open graphs/ratio.dat\n");
 		exit(EXIT_FAILURE); 
 	}
+	
+	/// подписи к столбцам в новом .csv файле
+	fprintf(fp, "arr_size;saxpy CUDA / Thrust;saxpy cuBLAS / Thrust;");
+	fprintf(fp, "DevToDev CUDA / Thrust; DevToDev cuBLAS / Thrust;");
+	fprintf(fp, "DevToHostUsual CUDA / Thrust; DevToHostPaged CUDA / Thrust;");
+	fprintf(fp, "DevToHostUsual cuBLAS / Thrust; DevToHostPaged cuBLAS / Thrust\n");
+	
 	for (int i = 0; i < iterations; i++) {
 		fprintf(fp, "%d;", degree - i);
 		//время saxpy-CUDA поделить на время saxpy-Thrust:
 		fprintf(fp, "%g;", time_arr[i * TA_COLS] / time_arr[i * TA_COLS + 1]);
 		//время saxpy-cuBLAS поделить на время saxpy-Thrust:
 		fprintf(fp, "%g;", time_arr[i * TA_COLS + 2] / time_arr[i * TA_COLS + 1]);
+		//время копирования DevToDev, CUDA / Thrust:
+		fprintf(fp, "%g;", time_arr[i * TA_COLS + 3] / time_arr[i * TA_COLS + 4]);
+		//время копирования DevToDev, cuBLAS / Thrust:
+		fprintf(fp, "%g;", time_arr[i * TA_COLS + 5] / time_arr[i * TA_COLS + 4]);
+		//время копирования DevToHostUsual, CUDA / Thrust:
+		fprintf(fp, "%g;", time_arr[i * TA_COLS + 6] / time_arr[i * TA_COLS + 8]);
+		//время копирования DevToHostPaged, CUDA / Thrust:
+		fprintf(fp, "%g;", time_arr[i * TA_COLS + 7] / time_arr[i * TA_COLS + 8]);
+		//время копирования DevToHostUsual, cuBLAS / Thrust:
+		fprintf(fp, "%g;", time_arr[i * TA_COLS + 9] / time_arr[i * TA_COLS + 8]);
+		//время копирования DevToHostPaged, cuBLAS / Thrust:
+		fprintf(fp, "%g;", time_arr[i * TA_COLS + 10] / time_arr[i * TA_COLS + 8]);
 		fprintf(fp, "\n");
 	}
 	
 	cudaEventDestroy(start);
 	cudaEventDestroy(stop);
-	return 0;
+	printf("finish successful\n");
+	exit(EXIT_SUCCESS);
 }

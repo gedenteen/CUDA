@@ -36,13 +36,13 @@ void saxpy_thrust(long int arr_size, float alpha, int iterations,
 		Y_dev.resize(tmp_size);
 	
 		cudaEventRecord(start, 0);
-		for (int j = 0; j < 9; j++) //saxpy вызывается несколько раз для большей точности по времени
+		for (int j = 0; j < NOKR; j++) //saxpy вызывается несколько раз для большей точности по времени
 			saxpy(alpha, X_dev, Y_dev);
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
 		
-		_time /= 9;
+		_time /= NOKR;
 		time_arr[i * TA_COLS + 1] = _time;
 		
 		if (check_arrays) 
@@ -79,13 +79,13 @@ void copying_thrust(long int arr_size, int iterations, int check_arrays,
 		Y_dev.resize(tmp_size);
 	
 		cudaEventRecord(start, 0);
-		for (int j = 0; j < 3; j++) //копирование вызывается несколько раз для большей точности по времени
+		for (int j = 0; j < NOKR; j++) //копирование вызывается несколько раз для большей точности по времени
 			Y_dev = X_dev;
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
 		
-		_time /= 3;
+		_time /= NOKR;
 		time_arr[i * TA_COLS + 4] = _time;
 		
 		if (check_arrays) {
@@ -94,14 +94,14 @@ void copying_thrust(long int arr_size, int iterations, int check_arrays,
 		}
 		
 		cudaEventRecord(start, 0);
-		for (int j = 0; j < 3; j++) //копирование вызывается несколько раз для большей точности по времени
+		for (int j = 0; j < NOKR; j++) //копирование вызывается несколько раз для большей точности по времени
 			X_hos = X_dev;
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
 		
-		_time /= 3;
-		time_arr[i * TA_COLS + 7] = _time;
+		_time /= NOKR;
+		time_arr[i * TA_COLS + 8] = _time;
 		
 		if (check_arrays) {
 			printf("size of arrays = %ld\n", tmp_size); 

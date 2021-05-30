@@ -40,13 +40,13 @@ void saxpy_cublas(long int arr_size, float alpha, int iterations,
 	long int tmp_size = arr_size; //размер массива, который на каждой итерации уменьшаться вдвое
 	for (int i = 0; i < iterations; tmp_size = tmp_size >> 1, i++) {
 		cudaEventRecord(start, 0);
-		for (int j = 0; j < 9; j++) //saxpy вызывается несколько раз для большей точности по времени
+		for (int j = 0; j < NOKR; j++) //saxpy вызывается несколько раз для большей точности по времени
 			cublasSaxpy(cublas_handle, tmp_size, &alpha, X_dev, stride, Y_dev, stride);
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
 		
-		_time /= 9;
+		_time /= NOKR;
 		time_arr[i * TA_COLS + 2] = _time;
 		
 		if (check_arrays) 
@@ -108,13 +108,13 @@ void copying_cublas(long int arr_size, int iterations, int check_arrays,
 	long int tmp_size = arr_size; //размер массива, который на каждой итерации уменьшаться вдвое
 	for (int i = 0; i < iterations; tmp_size = tmp_size >> 1, i++) {
 		cudaEventRecord(start, 0);
-    	for (int j = 0; j < 3; j++) //копирование вызывается несколько раз для большей точности по времени
+    	for (int j = 0; j < NOKR; j++) //копирование вызывается несколько раз для большей точности по времени
 			cublasScopy(cublas_handle, tmp_size, dev1_arr, stride, dev1_arr, stride);
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
 		
-		_time /= 3;
+		_time /= NOKR;
 		time_arr[i * TA_COLS + 5] = _time;
 		
 		if (check_arrays) {
@@ -123,14 +123,14 @@ void copying_cublas(long int arr_size, int iterations, int check_arrays,
 		}
 		
 		cudaEventRecord(start, 0);
-		for (int j = 0; j < 3; j++) //копирование вызывается несколько раз для большей точности по времени
+		for (int j = 0; j < NOKR; j++) //копирование вызывается несколько раз для большей точности по времени
 			cublasGetMatrix(tmp_size, num_cols, elem_size, dev1_arr, tmp_size, host_usual_arr, tmp_size);
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
 		
-		_time /= 3;
-		time_arr[i * TA_COLS + 8] = _time;
+		_time /= NOKR;
+		time_arr[i * TA_COLS + 9] = _time;
 		
 		if (check_arrays) {
 			printf("size of arrays = %ld\n", tmp_size); 
@@ -138,14 +138,14 @@ void copying_cublas(long int arr_size, int iterations, int check_arrays,
 		}
 		
 		cudaEventRecord(start, 0);
-		for (int j = 0; j < 3; j++) //копирование вызывается несколько раз для большей точности по времени
+		for (int j = 0; j < NOKR; j++) //копирование вызывается несколько раз для большей точности по времени
 			cublasGetMatrix(tmp_size, num_cols, elem_size, dev1_arr, tmp_size, host_paged_arr, tmp_size);
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
 		
-		_time /= 3;
-		time_arr[i * TA_COLS + 9] = _time;
+		_time /= NOKR;
+		time_arr[i * TA_COLS + 10] = _time;
 		
 		if (check_arrays) {
 			printf("size of arrays = %ld\n", tmp_size); 

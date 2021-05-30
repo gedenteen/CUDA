@@ -1,21 +1,21 @@
 all: main.exe
 
-main.exe: main.o test_cuda.o test_thrust.o test_cublas.o
+main.exe: obj/main.o obj/test_cuda.o obj/test_thrust.o obj/test_cublas.o
 	nvcc -o $@ $^ -lcublas
 
-main.o: main.cu
+obj/main.o: main.cu
 	nvcc -c -o $@ $<	
-test_cuda.o: test_cuda.cu
+obj/test_cuda.o: test_cuda.cu
 	nvcc -c -o $@ $<	
-test_thrust.o: test_thrust.cu
+obj/test_thrust.o: test_thrust.cu
 	nvcc -c -o $@ $<
-test_cublas.o: test_cublas.cu
+obj/test_cublas.o: test_cublas.cu
 	nvcc -c -o $@ $<	
 
 .PHONY: all clean run
 
 run:
-	./main.exe && gnuplot graph.gpi
+	./main.exe && gnuplot graphs.gpi
 
 clean:
 	rm -rf *.o *.exe

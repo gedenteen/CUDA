@@ -22,7 +22,7 @@ void saxpy_cuda(long int arr_size, float alpha, int iterations,
 	cudaMallocHost((void **) &Y_hos, size_in_bytes);
 	
 	/// заполнение массивов:
-	for (int i=0; i < arr_size; i++){
+	for (int i = 0; i < arr_size; i++){
 		X_hos[i] = (float)i;
 	}
 	memset(Y_hos, 0, size_in_bytes);
@@ -36,7 +36,7 @@ void saxpy_cuda(long int arr_size, float alpha, int iterations,
 	long int tmp_size = arr_size; //размер массива, который на каждой итерации уменьшаться вдвое
 	for (int i = 0; i < iterations; tmp_size = tmp_size >> 1, i++) {
 		cudaEventRecord(start, 0);
-		for (int j = 0; j < 9; j++) //saxpy вызывается несколько раз для большей точности по времени
+		for (int j = 0; j < NOKR; j++) //saxpy вызывается несколько раз для большей точности по времени
 		{
 			saxpy <<< tmp_size / 256, 256 >>> (tmp_size, alpha, X_dev, Y_dev);
 			cudaDeviceSynchronize(); //синхронизация потоков
@@ -45,7 +45,7 @@ void saxpy_cuda(long int arr_size, float alpha, int iterations,
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
 
-		_time /= 9; //посчитать среднее время выполнения saxpy
+		_time /= NOKR; //посчитать среднее время выполнения saxpy
 		time_arr[i * TA_COLS] = _time; //записать время в общий массив
 		
 		if (check_arrays) 
@@ -97,13 +97,15 @@ void copying_cuda(long int arr_size, int iterations, int check_arrays,
 	long int tmp_size = arr_size; //размер массива, который на каждой итерации уменьшаться вдвое
 	for (int i = 0; i < iterations; tmp_size = tmp_size >> 1, i++) {
 		cudaEventRecord(start, 0);
-		for (int j = 0; j < 3; j++) //копирование вызывается несколько раз для большей точности по времени
+		for (int j = 0; j < NOKR; j++) { //копирование вызывается несколько раз для большей точности по времени
 			cudaMemcpy(dev2_arr, dev1_arr, tmp_size * sizeof(float), cudaMemcpyDeviceToDevice);
+			cudaDeviceSynchronize(); //синхронизация потоков
+		}
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
 		
-		_time /= 3;
+		_time /= NOKR;
 		time_arr[i * TA_COLS + 3] = _time;
 		
 		if (check_arrays) {
@@ -112,13 +114,15 @@ void copying_cuda(long int arr_size, int iterations, int check_arrays,
 		}
 		
 		cudaEventRecord(start, 0);
-		for (int j = 0; j < 3; j++) //копирование вызывается несколько раз для большей точности по времени
+		for (int j = 0; j < NOKR; j++) { //копирование вызывается несколько раз для большей точности по времени
     		cudaMemcpy(host_usual_arr, dev1_arr, tmp_size * sizeof(float), cudaMemcpyDeviceToHost);
+    		cudaDeviceSynchronize(); //синхронизация потоков
+    	}
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
 		
-		_time /= 3;
+		_time /= NOKR;
 		time_arr[i * TA_COLS + 6] = _time;
 		
 		if (check_arrays) {
@@ -127,13 +131,13 @@ void copying_cuda(long int arr_size, int iterations, int check_arrays,
 		}
 		
 		cudaEventRecord(start, 0);
-		for (int j = 0; j < 3; j++) //копирование вызывается несколько раз для большей точности по времени
+		for (int j = 0; j < NOKR; j++) //копирование вызывается несколько раз для большей точности по времени
 			cudaMemcpy(host_paged_arr, dev1_arr, tmp_size * sizeof(float), cudaMemcpyDeviceToHost);
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&_time, start, stop);
 		
-		_time /= 3;
+		_time /= NOKR;
 		time_arr[i * TA_COLS + 7] = _time;
 		
 		if (check_arrays) {

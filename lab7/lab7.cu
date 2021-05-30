@@ -111,27 +111,32 @@ int main()
 	cudaMemcpy(dev_cda, cda, Nx * Nt * sizeof(float), cudaMemcpyHostToDevice);
 	cudaEventRecord(start, 0);
 
+	/*
 	for (int i = 0; i < Nt - 1; i++) {
 		kernel <<< Nx / 256, 256 >>> (dt / dx, dev_cda + (i * Nx), dev_cda + ((i + 1) * Nx));
 		cudaDeviceSynchronize();
 	}
+	
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop);
 		cudaMemcpy(cda, dev_cda, Nx * Nt * sizeof(float), cudaMemcpyDeviceToHost);
 	cudaEventElapsedTime(&time, start, stop);
 	cout << "CUDA time is " << time << "ms\n\n";
+	*/
 	
-	/* //проверка:
+	 //проверка:
 	float thr_sum = 0.0f;
 	float cda_sum = 0.0f;
 	for (int i = 0; i < Nx; i++) {
 		for (int j = 0; j < Nt; j++) {
 			cda_sum += cda[i + j * Nt];
 			thr_sum += thr[i + j * Nt];
+			//if (cda[i + j * Nt] != thr[i + j * Nt])
+			//	printf("difference in [%d + %d * Nt]\n", i, j);
 		}
 	}
 	printf("thr_sum = %f \ncda_sum = %f \n", thr_sum, cda_sum);
-	*/
+	
 	
 	//для cda.gpi, thr.gpi
 	FILE *fp_thr, *fp_cda;

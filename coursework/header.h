@@ -30,6 +30,7 @@
 } //макрос для обработки ошибок CUBLAS
 
 #define TA_COLS 11 //количество столбцов в массиве time_arr
+#define NOKR 1 //number of kernel runs
 
 void saxpy_cuda(long int arr_size, float alpha, int iterations, 
                 cudaEvent_t start, cudaEvent_t stop, int check_arrays, float *time_arr);
