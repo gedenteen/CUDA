@@ -6,6 +6,7 @@
 #изображение, где будет диаграмма
 set terminal png font "Verdana,12" size 1200, 900
 set output "graphs/SAXPY_time.png"
+set title "SAXPY, time" font "Verdana,14"
 
 #символ-раделитель в файле
 set datafile separator ';'
@@ -31,6 +32,7 @@ plot "graphs/time.csv" using 2:xtic(1) every ::1 title "CUDA C" lt rgb "#11CC11"
 #изображение, где будет диаграмма
 set terminal png font "Verdana,12" size 1200, 900
 set output "graphs/SAXPY_ratio.png"
+set title "SAXPY, ratio" font "Verdana,14"
 
 #символ-раделитель в файле
 set datafile separator ';'
@@ -53,6 +55,7 @@ plot "graphs/ratio.csv" using 2:xtic(1) every ::1 title "CUDA C / Trhust" lt rgb
 #изображение, где будет диаграмма
 set terminal png font "Verdana,12" size 1200, 900
 set output "graphs/CopyingDevToDev_time.png"
+set title "copying an array from device to device, time" font "Verdana,14"
 
 #символ-раделитель в файле
 set datafile separator ';'
@@ -76,6 +79,7 @@ plot "graphs/time.csv" using 5:xtic(1) every ::1 title "CUDA C" lt rgb "#11CC11"
 #изображение, где будет диаграмма
 set terminal png font "Verdana,12" size 1200, 900
 set output "graphs/CopyingDevToDev_ratio.png"
+set title "copying an array from device to device, ratio" font "Verdana,14"
 
 #символ-раделитель в файле
 set datafile separator ';'
@@ -98,6 +102,7 @@ plot "graphs/ratio.csv" using 4:xtic(1) every ::1 title "CUDA C / Trhust" lt rgb
 #изображение, где будет диаграмма
 set terminal png font "Verdana,12" size 1500, 900
 set output "graphs/CopyingDevToHost_time.png"
+set title "copying an array from device to host, time" font "Verdana,14"
 
 #символ-раделитель в файле
 set datafile separator ';'
@@ -123,6 +128,7 @@ plot "graphs/time.csv" using 8:xtic(1) every ::1 title "CUDA C, device to usual 
 #изображение, где будет диаграмма
 set terminal png font "Verdana,12" size 1200, 900
 set output "graphs/CopyingDevToHost_ratio.png"
+set title "copying an array from device to host, ratio" font "Verdana,14"
 
 #символ-раделитель в файле
 set datafile separator ';'

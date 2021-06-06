@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
 	printf("performing copying_CUDA...\n");
 	copying_cuda(arr_size, iterations, check_arrays, start, stop, time_arr); //если Куду поместить выше Траста, то ломается...	
 	
-	///открытие файла, чтобы записать туда time_arr[]
+	/// открытие файла, чтобы записать туда time_arr[]
 	FILE *fp;
 	fp = fopen("graphs/time.csv", "w");
 	if (fp == NULL) {
@@ -99,6 +99,7 @@ int main(int argc, char *argv[]) {
 	fprintf(fp, "DevToHostUsual CUDA / Thrust; DevToHostPaged CUDA / Thrust;");
 	fprintf(fp, "DevToHostUsual cuBLAS / Thrust; DevToHostPaged cuBLAS / Thrust\n");
 	
+	/// высчитать отношение времени по отношению к Thrust:
 	for (int i = 0; i < iterations; i++) {
 		fprintf(fp, "%d;", degree - i);
 		//время saxpy-CUDA поделить на время saxpy-Thrust:
